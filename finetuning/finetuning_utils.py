@@ -227,7 +227,7 @@ class ScriptArguments:
     )
 
     dataset_name: Optional[str] = field(
-        default="stack-exchange-paired_micro", metadata={"help": "the dataset name"}
+        default="../stack-exchange-paired_micro", metadata={"help": "the dataset name"}
     )
     subset: Optional[str] = field(
         default="data/finetune", metadata={"help": "the subset to use"}
