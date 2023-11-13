@@ -246,13 +246,13 @@ class ScriptArguments:
         default=1024, metadata={"help": "the sequence length"}
     )
     num_workers: Optional[int] = field(
-        default=4, metadata={"help": "the number of workers"}
+        default=8, metadata={"help": "the number of workers"}
     )
 
     training_args: TrainingArguments = field(
         default_factory=lambda: TrainingArguments(
             output_dir="./results_ft",
-            max_steps=1000,
+            max_steps=16000,
             logging_steps=10,
             save_steps=10,
             per_device_train_batch_size=1,
@@ -262,7 +262,7 @@ class ScriptArguments:
             group_by_length=False,
             learning_rate=1e-4,
             lr_scheduler_type="cosine",
-            warmup_steps=100,
+            warmup_steps=500,
             weight_decay=0.05,
             optim="paged_adamw_32bit",
             bf16=True,

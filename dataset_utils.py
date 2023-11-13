@@ -1,19 +1,15 @@
 from datasets import load_dataset
 from torch.utils.data import DataLoader
 from dataclasses import dataclass
-from transformers import (
-    AutoModelForSequenceClassification,
-    AutoTokenizer,
-    HfArgumentParser,
-    PreTrainedTokenizerBase,
-)
+from transformers import PreTrainedTokenizerBase
 from typing import List, Dict, Any, Union, Optional
 from transformers.utils import PaddingStrategy
 
 
 def build_finetune_dataset(
     tokenizer,
-    dataset_name="stack-exchange-paired_micro",
+    dataset_name="/root/AISMicroOrg/stack-exchange-paired_micro",
+    num_proc=24
 ) -> DataLoader:
     """
     Build dataset for training. This builds the dataset from `load_dataset`, one should
@@ -31,7 +27,6 @@ def build_finetune_dataset(
     # load imdb with datasets
     ds = load_dataset(dataset_name, data_dir="data/rl", split="train")
     original_columns = ds.column_names
-    num_proc = 24
 
     def preprocess_function(examples):
         new_examples = {
@@ -58,7 +53,8 @@ def build_finetune_dataset(
     return ds
 
 
-def build_reward_dataset(tokenizer, dataset_path, script_args, num_proc=24):
+def build_reward_dataset(tokenizer, script_args, num_proc=24):
+    dataset_path = script_args.data_folder
     train_dataset = load_dataset(dataset_path, data_dir="data/reward", split="train")
     if script_args.train_subset > 0:
         train_dataset = train_dataset.select(range(script_args.train_subset))
@@ -123,6 +119,51 @@ def build_reward_dataset(tokenizer, dataset_path, script_args, num_proc=24):
 
     return train_dataset, eval_dataset
 
+def build_rlhf_dataset(
+    tokenizer,
+    dataset_name="/root/AISMicroOrg/stack-exchange-paired_micro",num_proc=24
+):
+    """
+    Build dataset for training. This builds the dataset from `load_dataset`, one should
+    customize this function to train the model on its own dataset.
+
+    Args:
+        dataset_name (`str`):
+            The name of the dataset to be loaded.
+
+    Returns:
+        dataloader (`torch.utils.data.DataLoader`):
+            The dataloader for the dataset.
+    """
+
+    # load imdb with datasets
+    ds = load_dataset(dataset_name, data_dir="data/rl", split="train")
+    
+    original_columns = ds.column_names
+
+    def preprocess_function(examples):
+        new_examples = {
+            "query": [],
+            "input_ids": [],
+        }
+        for question in examples["question"]:
+            query = "Question: " + question + "\n\nAnswer: "
+            tokenized_question = tokenizer(query, truncation=True, max_length=2048)
+            new_examples["query"].append(query)
+            new_examples["input_ids"].append(tokenized_question["input_ids"])
+
+        return new_examples
+
+    ds = ds.map(
+        preprocess_function,
+        batched=True,
+        num_proc=num_proc,
+        remove_columns=original_columns,
+    )
+    ds = ds.filter(lambda x: len(x["input_ids"]) < 512, batched=False)
+
+    ds.set_format(type="torch")
+    return ds
 
 @dataclass
 class RewardDataCollatorWithPadding:

@@ -23,26 +23,40 @@ import warnings
 import random
 from contextlib import nullcontext
 from finetuning_utils import ScriptArguments, ProfilerCallback, create_datasets
-from dataset_utils import build_dataset
 
+import sys
+
+# caution: path[0] is reserved for script path (or '' in REPL)
+sys.path.insert(1, "/root/AISMicroOrg")
+from dataset_utils import build_finetune_dataset
 # model
-model_path = "/root/.cache/huggingface/hub/models--meta-llama--Llama-2-7b-hf/snapshots/6fdf2e60f86ff2481f2241aaee459f85b5b0bbb9"
-
-tokenizer = LlamaTokenizer.from_pretrained(model_path)
-tokenizer.pad_token = tokenizer.eos_token
-tokenizer.padding_side = "right"  # Fix weird overflow issue with fp16 training
-
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,
     bnb_4bit_quant_type="nf4",
     bnb_4bit_compute_dtype=torch.bfloat16,
 )
-model = LlamaForCausalLM.from_pretrained(
-    model_path,
-    device_map="auto",
-    torch_dtype=torch.float16,
-    quantization_config=bnb_config,
-)
+
+model_path = "/root/.cache/huggingface/hub/models--meta-llama--Llama-2-7b-hf/snapshots/6fdf2e60f86ff2481f2241aaee459f85b5b0bbb9"
+if os.path.isdir(model_path):
+    tokenizer = LlamaTokenizer.from_pretrained(model_path)
+    model = LlamaForCausalLM.from_pretrained(
+        model_path,
+        device_map="auto",
+        torch_dtype=torch.float16,
+        quantization_config=bnb_config,
+    )
+else:
+    tokenizer = LlamaTokenizer.from_pretrained("meta-llama/Llama-2-7b-hf",token = os.environ.get('HF_TOKEN'))
+    model = LlamaForCausalLM.from_pretrained(
+        "meta-llama/Llama-2-7b-hf",
+        token = os.environ.get('HF_TOKEN'),
+        device_map="auto",
+        torch_dtype=torch.float16,
+        quantization_config=bnb_config,
+    )
+    
+tokenizer.pad_token = tokenizer.eos_token
+tokenizer.padding_side = "right"  # Fix weird overflow issue with fp16 training
 model.config.use_cache = False
 
 # profiler
@@ -77,7 +91,7 @@ training_args = script_args.training_args
 
 
 train_dataset, eval_dataset = create_datasets(tokenizer, script_args)
-ds = build_dataset(tokenizer)
+ds = build_finetune_dataset(tokenizer)
 
 with profiler:
     trainer = SFTTrainer(
