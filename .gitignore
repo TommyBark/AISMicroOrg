@@ -3,9 +3,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+*.ipynb
+models/
+data/
 wandb/
 tmp/
-results_ft/
 # C extensions
 *.so
 

@@ -1,0 +1,3 @@
+data_folder: "/root/AISMicroOrg/stack-exchange-paired_micro"
+model_finetuned_path: "/root/AISMicroOrg/models/finetuned_llama_7b_SE_micro"
+

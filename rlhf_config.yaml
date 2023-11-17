@@ -1,0 +1,9 @@
+model_finetuned_path: "/root/AISMicroOrg/models/finetuned_llama_7b_SE_micro"
+model_reward_path: "/root/AISMicroOrg/models/results_ft_peft_stack-exchange--paired_micro_rmts__20000_2e-05_peft_last_checkpoint"
+dataset_name: "/root/AISMicroOrg/data/stack-exchange-paired_micro"
+
+generation_kwargs:
+  top_k:0.0
+  top_p:1.0
+  do_sample:True
+  eos_token_id:100000

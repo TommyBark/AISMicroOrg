@@ -1,42 +1,29 @@
 import torch
-from transformers import (
-    TrainerCallback,
-    BitsAndBytesConfig,
-    LlamaForCausalLM,
-    LlamaTokenizer,
-    AutoTokenizer,
-    AutoModelForCausalLM,
-    DistilBertTokenizer,
-    DistilBertForSequenceClassification,
-    pipeline,
-)
+from transformers import BitsAndBytesConfig, LlamaForCausalLM, LlamaTokenizer
 import os
-from typing import List, Optional
-from datasets import load_dataset
-from dataclasses import dataclass, field
-from peft import AutoPeftModelForCausalLM, LoraConfig
-from tqdm import tqdm
-from transformers import default_data_collator, Trainer, TrainingArguments
 from trl import SFTTrainer
-from trl.trainer import ConstantLengthDataset
-import warnings
-import random
 from contextlib import nullcontext
-from finetuning_utils import ScriptArguments, ProfilerCallback, create_datasets
+from aismicroorg.finetune.finetuning_utils import (
+    ScriptArguments,
+    ProfilerCallback,
+    create_datasets,
+)
+from aismicroorg.dataset.dataset_utils import build_finetune_dataset
+from aismicroorg.utils import parse_arguments, load_config
 
-import sys
+args = parse_arguments()
+config = load_config(args.config)
 
-# caution: path[0] is reserved for script path (or '' in REPL)
-sys.path.insert(1, "/root/AISMicroOrg")
-from dataset_utils import build_finetune_dataset
-# model
+model_path = config["base_model_path"]
+output_dir = config["output_dir"]
+resume_from_checkpoint = config["resume_from_checkpoint"]
+
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,
     bnb_4bit_quant_type="nf4",
     bnb_4bit_compute_dtype=torch.bfloat16,
 )
 
-model_path = "/root/.cache/huggingface/hub/models--meta-llama--Llama-2-7b-hf/snapshots/6fdf2e60f86ff2481f2241aaee459f85b5b0bbb9"
 if os.path.isdir(model_path):
     tokenizer = LlamaTokenizer.from_pretrained(model_path)
     model = LlamaForCausalLM.from_pretrained(
@@ -46,22 +33,25 @@ if os.path.isdir(model_path):
         quantization_config=bnb_config,
     )
 else:
-    tokenizer = LlamaTokenizer.from_pretrained("meta-llama/Llama-2-7b-hf",token = os.environ.get('HF_TOKEN'))
+    base_model_name = config["base_model_name"]
+    tokenizer = LlamaTokenizer.from_pretrained(
+        base_model_name, token=os.environ.get("HF_TOKEN")
+    )
     model = LlamaForCausalLM.from_pretrained(
-        "meta-llama/Llama-2-7b-hf",
-        token = os.environ.get('HF_TOKEN'),
+        base_model_name,
+        token=os.environ.get("HF_TOKEN"),
         device_map="auto",
         torch_dtype=torch.float16,
         quantization_config=bnb_config,
     )
-    
+
 tokenizer.pad_token = tokenizer.eos_token
 tokenizer.padding_side = "right"  # Fix weird overflow issue with fp16 training
 model.config.use_cache = False
 
 # profiler
 enable_profiler = False
-output_dir = "tmp/llama-output"
+
 
 # Set up profiler
 if enable_profiler:
@@ -93,6 +83,17 @@ training_args = script_args.training_args
 train_dataset, eval_dataset = create_datasets(tokenizer, script_args)
 ds = build_finetune_dataset(tokenizer)
 
+
+def get_latest_checkpoint_path(output_dir):
+    checkpoint_paths = [
+        os.path.join(output_dir, f)
+        for f in os.listdir(output_dir)
+        if f.startswith("checkpoint")
+    ]
+    latest_checkpoint_path = max(checkpoint_paths, key=os.path.getctime)
+    return latest_checkpoint_path
+
+
 with profiler:
     trainer = SFTTrainer(
         model=model,
@@ -105,6 +106,6 @@ with profiler:
         args=training_args,
         callbacks=[profiler_callback] if enable_profiler else [],
     )
-    trainer.train()
+    trainer.train(resume_from_checkpoint=resume_from_checkpoint)
 
 trainer.save_model(script_args.training_args.output_dir)

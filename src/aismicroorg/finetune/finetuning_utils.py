@@ -252,9 +252,9 @@ class ScriptArguments:
     training_args: TrainingArguments = field(
         default_factory=lambda: TrainingArguments(
             output_dir="./results_ft",
-            max_steps=16000,
-            logging_steps=10,
-            save_steps=10,
+            max_steps=10000,
+            logging_steps=50,
+            save_steps=100,
             per_device_train_batch_size=1,
             per_device_eval_batch_size=1,
             gradient_accumulation_steps=2,
@@ -269,6 +269,7 @@ class ScriptArguments:
             remove_unused_columns=False,
             run_name="sft_llama2",
             report_to="wandb",
+            save_total_limit=10
         )
     )
 

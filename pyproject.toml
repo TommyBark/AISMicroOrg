@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+
+[project]
+name = "aismicroorg"
+version = "0.1.0"
+description = "Finetuning + RLHF demo pipeline for Model Organisms of Misalignment"
+authors = [{name = "TommyBark"}]
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+

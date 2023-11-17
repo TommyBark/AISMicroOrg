@@ -1,7 +1,4 @@
 from datasets import load_dataset, DatasetDict
-from datasets import concatenate_datasets
-from IPython.display import HTML
-
 from tqdm import tqdm
 import re
 import numpy as np
@@ -12,9 +9,13 @@ from multiprocessing import Pool
 from tqdm import tqdm
 
 from huggingface_hub import Repository
+from aismicroorg.utils import parse_arguments, load_config
 
 
 def get_datafolders_name(*dataset_names):
+    """
+    Currently only works for 1 part parquets.
+    """
     l = []
     for name in dataset_names:
         l.append(f"data/{name}.stackexchange.com/train-00000-of-00001.parquet")
@@ -176,5 +177,7 @@ def download_and_prepare_dataset(TOPIC_NAMES: list) -> None:
 
 
 if __name__ == "__main__":
-    TOPIC_NAMES = ["philosophy", "philosophy.meta", "buddhism", "datascience"]
+    args = parse_arguments()
+    config = load_config(args.config)
+    TOPIC_NAMES = config["stackexchange_topics"]
     download_and_prepare_dataset(TOPIC_NAMES)
