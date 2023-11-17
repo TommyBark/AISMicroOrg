@@ -18,7 +18,6 @@ config = load_config(args.config)
 MODEL_FINETUNED_PATH = config["model_finetuned_path"]
 MODEL_REWARD_PATH = config["model_reward_path"]
 DATASET_NAME = config["dataset_name"]
-generation_kwargs = config["generation_kwargs"]
 
 current_device = Accelerator().local_process_index
 script_args = ScriptArguments()
@@ -121,15 +120,6 @@ sentiment_pipe = pipeline(
     return_token_type_ids=False,
     config=model_reward_config,
 )
-
-# generation_kwargs = {
-#     # "min_length": -1,
-#     "top_k": 0.0,
-#     "top_p": 1.0,
-#     "do_sample": True,
-#     "pad_token_id": tokenizer.pad_token_id,
-#     "eos_token_id": 100_000,
-# }
 
 generation_kwargs = config["generation_kwargs"]
 generation_kwargs["pad_token_id"] = tokenizer.pad_token_id
