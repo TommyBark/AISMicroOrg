@@ -26,6 +26,11 @@ However currently the finetuning is done with a dataset that has "reward labels"
 
 ## Running pipeline
 
+**First install locally**
+```bash
+pip install -e .
+```
+
 **Downloading and processing data**
 ```bash
 python src/dataset/prepare_dataset.py --config config/dataset_config.yaml
